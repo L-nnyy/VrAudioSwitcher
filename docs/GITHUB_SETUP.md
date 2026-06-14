@@ -34,10 +34,9 @@ creates the GitHub Release automatically. No manual upload needed.
 
 ## 4. (Optional) Repo polish
 
-- Update the CI badge in `README.md` (replace `OWNER`).
 - Set the repo description and topics:
   ```powershell
-  gh repo edit OWNER/VrAudioSwitcher `
+  gh repo edit l-nnyy/VrAudioSwitcher `
     --description "Keep default audio devices sane around SteamVR" `
     --add-topic steamvr --add-topic openvr --add-topic audio --add-topic windows --add-topic vr
   ```

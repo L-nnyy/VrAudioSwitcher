@@ -1,8 +1,7 @@
 # VR Audio Switcher
 
-<!-- After pushing to GitHub, replace OWNER with your username/org. -->
-[![CI](https://github.com/OWNER/VrAudioSwitcher/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/VrAudioSwitcher/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/OWNER/VrAudioSwitcher?sort=semver)](https://github.com/OWNER/VrAudioSwitcher/releases/latest)
+[![CI](https://github.com/l-nnyy/VrAudioSwitcher/actions/workflows/ci.yml/badge.svg)](https://github.com/l-nnyy/VrAudioSwitcher/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/l-nnyy/VrAudioSwitcher?sort=semver)](https://github.com/l-nnyy/VrAudioSwitcher/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Lightweight Windows tray app that keeps your default audio devices sane around
@@ -10,11 +9,8 @@ SteamVR. When SteamVR starts it applies an audio profile (output **and**
 microphone); when SteamVR closes it **restores your exact desktop audio state**.
 No more hunting through Sound settings after every VR session.
 
-Inspired by ovrAdvancedSettings / OVR Toolkit — runs in the background, configured
-once.
-
 **Download:** grab the latest installer or portable exe from the
-[Releases page](https://github.com/OWNER/VrAudioSwitcher/releases/latest).
+[Releases page](https://github.com/l-nnyy/VrAudioSwitcher/releases/latest).
 
 ## Features
 
@@ -29,51 +25,14 @@ once.
 - **Global hotkey** to cycle profiles.
 - **SteamVR dashboard overlay** to switch profiles from inside the headset.
 - **Launch at Windows startup** (per-user, optional).
-- Single ~1 MB exe, no installer.
-
-## How it works
-
-- Connects to OpenVR as a *Background* app, so it never launches SteamVR itself.
-  It polls for the runtime, reads the connected HMD model, and listens for
-  `VREvent_Quit`.
-- Audio is controlled directly via the Windows Core Audio API
-  (`IMMDeviceEnumerator` to enumerate/read, `IPolicyConfig::SetDefaultEndpoint`
-  to set defaults) — no third-party audio dependency.
-- The overlay is a dashboard overlay drawn to a CPU bitmap and pushed via
-  `SetOverlayRaw`; laser clicks are read from overlay mouse events.
+- Single ~1 MB exe, no installer required.
 
 ## Requirements
 
 - Windows 10/11 (x64)
 - [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
-  (framework-dependent build)
+  (the installer will prompt if missing)
 - SteamVR
-
-## Build
-
-```powershell
-dotnet build VrAudioSwitcher.sln -c Debug
-```
-
-## Publish (single file)
-
-```powershell
-dotnet publish VrAudioSwitcher/VrAudioSwitcher.csproj -c Release -r win-x64 `
-  --self-contained false -p:PublishSingleFile=true `
-  -p:IncludeNativeLibrariesForSelfExtract=true -o publish
-```
-
-## Installer
-
-A clean per-user installer (Inno Setup) is scaffolded under `installer/`:
-
-```powershell
-winget install JRSoftware.InnoSetup   # one-time
-pwsh installer\build-installer.ps1     # publishes + builds installer\dist\VrAudioSwitcher-Setup-1.0.1.exe
-```
-
-The installer is per-user (no admin), offers desktop/startup shortcuts, and checks
-for the .NET 8 Desktop Runtime (pointing to the download if missing).
 
 ## Usage
 
@@ -86,11 +45,11 @@ for the .NET 8 Desktop Runtime (pointing to the download if missing).
 3. Start SteamVR → the profile is applied. Close SteamVR → desktop audio is
    restored.
 4. In VR, open the SteamVR dashboard → the VR Audio Switcher overlay lets you
-   switch profiles.
+   switch profiles without taking off the headset.
 
 Config lives at `%APPDATA%\VrAudioSwitcher\config.json`.
 
-### Hidden diagnostic
+### Diagnostic
 
 ```powershell
 VrAudioSwitcher.exe --list-audio
@@ -110,7 +69,6 @@ Dumps all endpoints + current defaults to stdout.
 
 - CI builds every push/PR (`.github/workflows/ci.yml`).
 - Releases are tag-driven — see [docs/RELEASING.md](docs/RELEASING.md).
-- First-time GitHub setup — see [docs/GITHUB_SETUP.md](docs/GITHUB_SETUP.md).
 
 ## License
 
