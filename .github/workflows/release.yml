@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write   # needed to create the GitHub Release
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Derive version from tag
+        id: ver
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          "version=$v" >> $env:GITHUB_OUTPUT
+          Write-Host "Version: $v"
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build portable + installer
+        shell: pwsh
+        run: ./installer/build-installer.ps1 -Version ${{ steps.ver.outputs.version }}
+
+      - name: Stage release artifacts
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          New-Item -ItemType Directory -Force release | Out-Null
+          Copy-Item "installer/dist/VrAudioSwitcher-Setup-$v.exe" "release/"
+          Copy-Item "publish/VrAudioSwitcher.exe" "release/VrAudioSwitcher-$v-portable.exe"
+          Get-ChildItem release -File |
+            ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash)  $($_.Name)" } |
+            Out-File "release/SHA256SUMS.txt" -Encoding utf8
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: VR Audio Switcher ${{ steps.ver.outputs.version }}
+          files: release/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

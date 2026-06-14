@@ -1,0 +1,37 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      placeholder: "1.0.1 (see tray menu / file properties)"
+    validations:
+      required: true
+  - type: input
+    id: hmd
+    attributes:
+      label: Headset / SteamVR setup
+      placeholder: "e.g. Valve Index, SteamVR x.y"
+  - type: textarea
+    id: audio
+    attributes:
+      label: Audio devices involved
+      placeholder: "Output / mic, and whether they were unplugged at any point"

@@ -1,5 +1,10 @@
 # VR Audio Switcher
 
+<!-- After pushing to GitHub, replace OWNER with your username/org. -->
+[![CI](https://github.com/OWNER/VrAudioSwitcher/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/VrAudioSwitcher/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/OWNER/VrAudioSwitcher?sort=semver)](https://github.com/OWNER/VrAudioSwitcher/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Lightweight Windows tray app that keeps your default audio devices sane around
 SteamVR. When SteamVR starts it applies an audio profile (output **and**
 microphone); when SteamVR closes it **restores your exact desktop audio state**.
@@ -7,6 +12,9 @@ No more hunting through Sound settings after every VR session.
 
 Inspired by ovrAdvancedSettings / OVR Toolkit — runs in the background, configured
 once.
+
+**Download:** grab the latest installer or portable exe from the
+[Releases page](https://github.com/OWNER/VrAudioSwitcher/releases/latest).
 
 ## Features
 
@@ -97,3 +105,13 @@ Dumps all endpoints + current defaults to stdout.
 - If the app is started *after* SteamVR is already running, it can't know the
   pre-VR desktop state and will snapshot whatever is current as the baseline.
 - Profile editing is desktop-only; the VR overlay is switch-only by design.
+
+## Contributing & releasing
+
+- CI builds every push/PR (`.github/workflows/ci.yml`).
+- Releases are tag-driven — see [docs/RELEASING.md](docs/RELEASING.md).
+- First-time GitHub setup — see [docs/GITHUB_SETUP.md](docs/GITHUB_SETUP.md).
+
+## License
+
+MIT — see [LICENSE](LICENSE).

@@ -1,15 +1,32 @@
 # Publishes the app (single-file, framework-dependent) and compiles the installer.
 # Requires Inno Setup 6:  winget install JRSoftware.InnoSetup
 #
-# Usage:  pwsh installer\build-installer.ps1   (run from the repo root)
+# Usage:
+#   pwsh installer\build-installer.ps1                 # uses csproj default version
+#   pwsh installer\build-installer.ps1 -Version 1.0.1  # stamps exe + installer with this version
+
+param(
+    [string]$Version = ""
+)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 
 Write-Host "==> Publishing single-file build..." -ForegroundColor Cyan
-dotnet publish "$root\VrAudioSwitcher\VrAudioSwitcher.csproj" -c Release -r win-x64 `
-    --self-contained false -p:PublishSingleFile=true `
-    -p:IncludeNativeLibrariesForSelfExtract=true -o "$root\publish"
+$publishArgs = @(
+    "$root\VrAudioSwitcher\VrAudioSwitcher.csproj",
+    '-c', 'Release', '-r', 'win-x64',
+    '--self-contained', 'false',
+    '-p:PublishSingleFile=true',
+    '-p:IncludeNativeLibrariesForSelfExtract=true',
+    '-o', "$root\publish"
+)
+if ($Version) {
+    $publishArgs += "-p:Version=$Version"
+    $publishArgs += "-p:FileVersion=$Version.0"
+    $publishArgs += "-p:AssemblyVersion=$Version.0"
+}
+dotnet publish @publishArgs
 
 # Locate the Inno Setup compiler (PATH, machine install, or per-user install).
 $iscc = (Get-Command iscc -ErrorAction SilentlyContinue).Source
@@ -26,6 +43,9 @@ if (-not $iscc) {
 }
 
 Write-Host "==> Compiling installer..." -ForegroundColor Cyan
-& $iscc "$root\installer\VrAudioSwitcher.iss"
+$isccArgs = @()
+if ($Version) { $isccArgs += "/DMyAppVersion=$Version" }
+$isccArgs += "$root\installer\VrAudioSwitcher.iss"
+& $iscc @isccArgs
 
 Write-Host "==> Done. Installer is in installer\dist\" -ForegroundColor Green

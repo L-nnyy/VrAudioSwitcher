@@ -3,7 +3,10 @@
 ; Or run: installer\build-installer.ps1         (publishes + compiles in one step)
 
 #define MyAppName "VR Audio Switcher"
-#define MyAppVersion "1.0.1"
+; Version may be overridden from the command line: iscc /DMyAppVersion=1.2.3
+#ifndef MyAppVersion
+  #define MyAppVersion "1.0.1"
+#endif
 #define MyAppPublisher "Ernest Ribeiro"
 #define MyAppExeName "VrAudioSwitcher.exe"
 

@@ -1,0 +1,17 @@
+# Normalize line endings; let Git decide on checkout.
+* text=auto
+
+# Source kept LF in the repo.
+*.cs    text eol=lf diff=csharp
+*.csproj text eol=lf
+*.sln   text eol=crlf
+*.yml   text eol=lf
+*.ps1   text eol=lf
+*.iss   text eol=lf
+*.md    text eol=lf
+
+# Binaries — never touch.
+*.ico  binary
+*.png  binary
+*.exe  binary
+*.dll  binary
