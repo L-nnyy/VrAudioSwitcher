@@ -1,6 +1,7 @@
 using System.Drawing;
 using VrAudioSwitcher.Core;
 using VrAudioSwitcher.Hotkeys;
+using VrAudioSwitcher.Vr;
 
 namespace VrAudioSwitcher.UI;
 
@@ -15,11 +16,13 @@ public sealed class TrayAppContext : ApplicationContext
     private readonly AppController _controller = new();
     private readonly HotkeyManager _hotkeys = new();
     private readonly NotifyIcon _tray = new();
+    private readonly ProfileOverlay _overlay;
     private Icon? _iconRef;
     private ConfigForm? _configForm;
 
     public TrayAppContext()
     {
+        _overlay = new ProfileOverlay(_controller);
         _controller.StateChanged += OnStateChanged;
         _controller.Watcher.Connected += OnVrConnected;
         _controller.Watcher.Quit += OnVrQuit;
@@ -47,6 +50,7 @@ public sealed class TrayAppContext : ApplicationContext
     private void OnVrConnected(string? model)
     {
         UpdateIcon();
+        _overlay.Create();
         var profile = _controller.CurrentProfile;
         ShowBalloon(profile != null
             ? $"SteamVR detected → applied \"{profile.Name}\""
@@ -55,6 +59,7 @@ public sealed class TrayAppContext : ApplicationContext
 
     private void OnVrQuit()
     {
+        _overlay.Destroy();
         UpdateIcon();
         ShowBalloon("SteamVR closed → desktop audio restored");
     }
@@ -141,6 +146,7 @@ public sealed class TrayAppContext : ApplicationContext
     {
         _tray.Visible = false;
         _configForm?.Close();
+        _overlay.Dispose();
         _hotkeys.Dispose();
         _controller.Dispose();
         IconFactory.DestroyHandle(_iconRef);
