@@ -55,6 +55,18 @@ dotnet publish VrAudioSwitcher/VrAudioSwitcher.csproj -c Release -r win-x64 `
   -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 ```
 
+## Installer
+
+A clean per-user installer (Inno Setup) is scaffolded under `installer/`:
+
+```powershell
+winget install JRSoftware.InnoSetup   # one-time
+pwsh installer\build-installer.ps1     # publishes + builds installer\dist\VrAudioSwitcher-Setup-x.y.z.exe
+```
+
+The installer is per-user (no admin), offers desktop/startup shortcuts, and checks
+for the .NET 8 Desktop Runtime (pointing to the download if missing).
+
 ## Usage
 
 1. Run `VrAudioSwitcher.exe`. A tray icon appears.

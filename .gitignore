@@ -2,6 +2,8 @@
 bin/
 obj/
 publish/
+installer/dist/
+preview.png
 
 # Visual Studio
 .vs/
