@@ -9,9 +9,20 @@
     <RootNamespace>VrAudioSwitcher</RootNamespace>
     <AssemblyName>VrAudioSwitcher</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+
+    <!-- Version info shown by Windows (Task Manager Startup tab, file properties). -->
+    <Product>VR Audio Switcher</Product>
+    <AssemblyTitle>VR Audio Switcher</AssemblyTitle>
+    <Company>Ernest Ribeiro</Company>
+    <Authors>Ernest Ribeiro</Authors>
+    <Description>Keeps default audio devices sane around SteamVR.</Description>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>

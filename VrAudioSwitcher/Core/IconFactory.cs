@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 
 namespace VrAudioSwitcher.Core;
@@ -40,5 +41,34 @@ public static class IconFactory
     {
         using var bmp = CreateBitmap(32, vrActive);
         return Icon.FromHandle(bmp.GetHicon());
+    }
+
+    /// <summary>
+    /// Write a PNG-compressed .ico (256×256) to disk — used once at design time to
+    /// produce the embedded application icon (Resources/app.ico).
+    /// </summary>
+    public static void SaveAppIcon(string path)
+    {
+        using var bmp = CreateBitmap(256, vrActive: false);
+        using var pngMs = new MemoryStream();
+        bmp.Save(pngMs, ImageFormat.Png);
+        var png = pngMs.ToArray();
+
+        using var fs = File.Create(path);
+        using var bw = new BinaryWriter(fs);
+        // ICONDIR
+        bw.Write((short)0);   // reserved
+        bw.Write((short)1);   // type: icon
+        bw.Write((short)1);   // image count
+        // ICONDIRENTRY
+        bw.Write((byte)0);    // width 0 => 256
+        bw.Write((byte)0);    // height 0 => 256
+        bw.Write((byte)0);    // palette
+        bw.Write((byte)0);    // reserved
+        bw.Write((short)1);   // color planes
+        bw.Write((short)32);  // bits per pixel
+        bw.Write(png.Length); // size of PNG data
+        bw.Write(22);         // offset (6 + 16)
+        bw.Write(png);
     }
 }

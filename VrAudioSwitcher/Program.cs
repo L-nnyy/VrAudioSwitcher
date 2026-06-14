@@ -14,6 +14,13 @@ static class Program
             return;
         }
 
+        int iconIdx = Array.IndexOf(args, "--make-icon");
+        if (iconIdx >= 0 && iconIdx + 1 < args.Length)
+        {
+            Core.IconFactory.SaveAppIcon(args[iconIdx + 1]);
+            return;
+        }
+
         ApplicationConfiguration.Initialize();
 
         int previewIdx = Array.IndexOf(args, "--config-preview");
