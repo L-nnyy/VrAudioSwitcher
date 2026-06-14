@@ -15,3 +15,6 @@ preview.png
 # OS
 Thumbs.db
 desktop.ini
+
+# Release artifacts (binaries; rebuild via installeruild-installer.ps1)
+release/
