@@ -27,7 +27,7 @@ public sealed class SteamVrWatcher : IDisposable
 
     public bool IsConnected => _connected;
 
-    public SteamVrWatcher(int pollIntervalMs = 1500)
+    public SteamVrWatcher(int pollIntervalMs = 2000)
     {
         _eventSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf(typeof(VREvent_t));
         _timer = new System.Windows.Forms.Timer { Interval = pollIntervalMs };

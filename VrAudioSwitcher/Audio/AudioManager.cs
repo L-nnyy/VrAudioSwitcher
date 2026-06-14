@@ -7,13 +7,18 @@ namespace VrAudioSwitcher.Audio;
 /// three Windows roles (Console / Multimedia / Communications), and snapshot /
 /// restore the full default state.
 /// </summary>
-public sealed class AudioManager
+public sealed class AudioManager : IDisposable
 {
     private static readonly ERole[] AllRoles =
         { ERole.Console, ERole.Multimedia, ERole.Communications };
 
     private static readonly EDataFlow[] AllFlows =
         { EDataFlow.Render, EDataFlow.Capture };
+
+    // Long-lived enumerator + client for default-change notifications (event-driven,
+    // replaces polling).
+    private IMMDeviceEnumerator? _notifyEnumerator;
+    private NotificationClient? _notifyClient;
 
     public IReadOnlyList<AudioDeviceInfo> ListPlaybackDevices() => List(EDataFlow.Render);
 
@@ -124,8 +129,52 @@ public sealed class AudioManager
         }
     }
 
+    /// <summary>
+    /// Subscribe to default-device changes (Console role only, to fire once per real
+    /// change). The callback runs on a system thread. Replaces polling for the
+    /// desktop baseline.
+    /// </summary>
+    public void RegisterDefaultChangeCallback(Action onDefaultChanged)
+    {
+        if (_notifyEnumerator != null) return;
+        _notifyEnumerator = CreateEnumerator();
+        _notifyClient = new NotificationClient(onDefaultChanged);
+        _notifyEnumerator.RegisterEndpointNotificationCallback(_notifyClient);
+    }
+
     private static IMMDeviceEnumerator CreateEnumerator() =>
         (IMMDeviceEnumerator)new MMDeviceEnumeratorComObject();
+
+    public void Dispose()
+    {
+        if (_notifyEnumerator != null && _notifyClient != null)
+        {
+            try { _notifyEnumerator.UnregisterEndpointNotificationCallback(_notifyClient); }
+            catch { /* shutting down */ }
+            Marshal.ReleaseComObject(_notifyEnumerator);
+            _notifyEnumerator = null;
+            _notifyClient = null;
+        }
+    }
+
+    // Minimal IMMNotificationClient: only OnDefaultDeviceChanged matters; fire once
+    // per change by filtering on the Console role.
+    private sealed class NotificationClient : IMMNotificationClient
+    {
+        private readonly Action _onChanged;
+        public NotificationClient(Action onChanged) => _onChanged = onChanged;
+
+        public int OnDefaultDeviceChanged(EDataFlow flow, ERole role, string defaultDeviceId)
+        {
+            if (role == ERole.Console) _onChanged();
+            return 0;
+        }
+
+        public int OnDeviceStateChanged(string deviceId, uint newState) => 0;
+        public int OnDeviceAdded(string deviceId) => 0;
+        public int OnDeviceRemoved(string deviceId) => 0;
+        public int OnPropertyValueChanged(string deviceId, PropertyKey key) => 0;
+    }
 
     private static string GetId(IMMDevice device)
     {

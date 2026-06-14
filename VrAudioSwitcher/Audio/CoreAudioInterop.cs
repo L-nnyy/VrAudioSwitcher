@@ -70,8 +70,27 @@ internal interface IMMDeviceEnumerator
     [PreserveSig]
     int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice device);
 
-    // Remaining methods unused — left unbound (vtable order preserved is enough here
-    // because we never call past GetDevice).
+    [PreserveSig]
+    int RegisterEndpointNotificationCallback(IMMNotificationClient client);
+
+    [PreserveSig]
+    int UnregisterEndpointNotificationCallback(IMMNotificationClient client);
+}
+
+// Callback interface Windows invokes on audio endpoint changes. Method order and
+// signatures must match the COM vtable exactly (we implement this in managed code,
+// so the runtime builds the CCW from this definition).
+[ComImport]
+[Guid("7991EEC9-7E89-4D85-8390-6C703CEC60C0")]
+[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IMMNotificationClient
+{
+    [PreserveSig] int OnDeviceStateChanged([MarshalAs(UnmanagedType.LPWStr)] string deviceId, uint newState);
+    [PreserveSig] int OnDeviceAdded([MarshalAs(UnmanagedType.LPWStr)] string deviceId);
+    [PreserveSig] int OnDeviceRemoved([MarshalAs(UnmanagedType.LPWStr)] string deviceId);
+    [PreserveSig] int OnDefaultDeviceChanged(EDataFlow flow, ERole role,
+        [MarshalAs(UnmanagedType.LPWStr)] string defaultDeviceId);
+    [PreserveSig] int OnPropertyValueChanged([MarshalAs(UnmanagedType.LPWStr)] string deviceId, PropertyKey key);
 }
 
 [ComImport]

@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Threading;
 using VrAudioSwitcher.Core;
 using VrAudioSwitcher.Hotkeys;
 using VrAudioSwitcher.Vr;
@@ -20,8 +21,21 @@ public sealed class TrayAppContext : ApplicationContext
     private Icon? _iconRef;
     private ConfigForm? _configForm;
 
+    // Single-instance: a second launch sets this event; we marshal it onto the UI
+    // thread (via a hidden control) to open the config window. Wait-based, no polling.
+    private readonly Control _marshal = new();
+    private readonly EventWaitHandle _showConfigEvent;
+    private readonly RegisteredWaitHandle _showConfigWait;
+
     public TrayAppContext()
     {
+        _ = _marshal.Handle; // force handle creation on the UI thread
+        _showConfigEvent = new EventWaitHandle(false, EventResetMode.AutoReset, Program.ShowConfigEventName);
+        _showConfigWait = ThreadPool.RegisterWaitForSingleObject(
+            _showConfigEvent,
+            (_, _) => { if (!_marshal.IsDisposed) _marshal.BeginInvoke((Action)OpenConfig); },
+            null, Timeout.Infinite, executeOnlyOnce: false);
+
         _overlay = new ProfileOverlay(_controller);
         _controller.StateChanged += OnStateChanged;
         _controller.Watcher.Connected += OnVrConnected;
@@ -43,6 +57,8 @@ public sealed class TrayAppContext : ApplicationContext
 
         if (_controller.Store.Config.Profiles.Count == 0)
             ShowBalloon("Open the menu → Configuration to create your first profile.");
+
+        MemoryUtil.TrimDeferred();
     }
 
     private void OnStateChanged() => UpdateIcon();
@@ -145,11 +161,14 @@ public sealed class TrayAppContext : ApplicationContext
     protected override void ExitThreadCore()
     {
         _tray.Visible = false;
+        _showConfigWait.Unregister(_showConfigEvent);
+        _showConfigEvent.Dispose();
         _configForm?.Close();
         _overlay.Dispose();
         _hotkeys.Dispose();
         _controller.Dispose();
         IconFactory.DestroyHandle(_iconRef);
+        _marshal.Dispose();
         _tray.Dispose();
         base.ExitThreadCore();
     }

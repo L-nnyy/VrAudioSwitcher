@@ -16,10 +16,9 @@ public sealed class AppController : IDisposable
     public SteamVrWatcher Watcher { get; } = new();
 
     // The desktop audio baseline to restore when SteamVR quits. It is refreshed
-    // continuously while VR is OFF, so it reflects the user's real desktop state
-    // captured BEFORE SteamVR hijacks the default device.
-    private AudioSnapshot? _desktopSnapshot;
-    private readonly System.Windows.Forms.Timer _snapshotTimer;
+    // (event-driven) whenever a default device changes while VR is OFF, so it
+    // reflects the user's real desktop state captured BEFORE SteamVR hijacks it.
+    private volatile AudioSnapshot? _desktopSnapshot;
 
     /// <summary>The profile currently applied, or null when on the desktop baseline.</summary>
     public Profile? CurrentProfile { get; private set; }
@@ -36,19 +35,20 @@ public sealed class AppController : IDisposable
     {
         Watcher.Connected += OnVrConnected;
         Watcher.Quit += OnVrQuit;
-        _snapshotTimer = new System.Windows.Forms.Timer { Interval = 1000 };
-        _snapshotTimer.Tick += (_, _) => RefreshDesktopBaseline();
     }
 
     public void Initialize()
     {
         Store.Load();
         RefreshDesktopBaseline();
-        _snapshotTimer.Start();
+        // Event-driven baseline: re-snapshot only when a default actually changes.
+        Audio.RegisterDefaultChangeCallback(RefreshDesktopBaseline);
         Watcher.Start();
     }
 
-    // Keep the desktop baseline current while no VR session is active.
+    // Capture the desktop baseline while no VR session is active. Called once at
+    // startup and on every default-device change (from a system thread — reference
+    // assignment is atomic, no lock needed).
     private void RefreshDesktopBaseline()
     {
         if (VrActive) return;
@@ -120,8 +120,7 @@ public sealed class AppController : IDisposable
 
     public void Dispose()
     {
-        _snapshotTimer.Stop();
-        _snapshotTimer.Dispose();
         Watcher.Dispose();
+        Audio.Dispose();
     }
 }

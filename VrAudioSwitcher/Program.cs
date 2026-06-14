@@ -1,7 +1,14 @@
+using System.Threading;
+
 namespace VrAudioSwitcher;
 
 static class Program
 {
+    // Per-user single-instance primitives. The "Local\" prefix scopes them to the
+    // current logon session.
+    internal const string ShowConfigEventName = "Local\\VrAudioSwitcher.ShowConfig";
+    private const string MutexName = "Local\\VrAudioSwitcher.SingleInstance";
+
     /// <summary>
     ///  The main entry point for the application.
     /// </summary>
@@ -27,6 +34,20 @@ static class Program
         if (previewIdx >= 0 && previewIdx + 1 < args.Length)
         {
             DebugConfigPreview(args[previewIdx + 1]);
+            return;
+        }
+
+        // Single instance: if one is already running, just tell it to show the
+        // config window and exit.
+        using var mutex = new Mutex(initiallyOwned: true, MutexName, out bool createdNew);
+        if (!createdNew)
+        {
+            try
+            {
+                using var ev = EventWaitHandle.OpenExisting(ShowConfigEventName);
+                ev.Set();
+            }
+            catch { /* the other instance is starting/stopping; nothing to do */ }
             return;
         }
 
