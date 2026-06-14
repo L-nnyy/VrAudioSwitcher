@@ -15,8 +15,7 @@ static class Program
         }
 
         ApplicationConfiguration.Initialize();
-        // Tray application context is wired up in a later step.
-        Application.Run(new ApplicationContext());
+        Application.Run(new UI.TrayAppContext());
     }
 
     // Hidden diagnostic: dump endpoints + current defaults to stdout.

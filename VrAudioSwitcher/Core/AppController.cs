@@ -24,6 +24,9 @@ public sealed class AppController : IDisposable
     /// <summary>The profile currently applied, or null when on the desktop baseline.</summary>
     public Profile? CurrentProfile { get; private set; }
 
+    /// <summary>Model of the most recently connected HMD (for "Use current" in config).</summary>
+    public string? LastHmdModel { get; private set; }
+
     public bool VrActive => Watcher.IsConnected;
 
     /// <summary>Raised whenever VR status or the current profile changes (UI refresh).</summary>
@@ -55,6 +58,7 @@ public sealed class AppController : IDisposable
 
     private void OnVrConnected(string? hmdModel)
     {
+        LastHmdModel = hmdModel;
         // Fallback: if we somehow have no baseline (app started after SteamVR),
         // capture one now — best effort.
         _desktopSnapshot ??= SafeSnapshot();
@@ -91,6 +95,9 @@ public sealed class AppController : IDisposable
         var p = Store.FindByName(name);
         if (p != null) ApplyProfile(p);
     }
+
+    /// <summary>Called after the config window saves changes, to refresh dependent UI.</summary>
+    public void NotifyConfigChanged() => StateChanged?.Invoke();
 
     /// <summary>Cycle to the next profile in the list (wraps around).</summary>
     public Profile? CycleProfile()
