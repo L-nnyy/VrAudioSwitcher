@@ -20,9 +20,9 @@
     <Company>Ernest Ribeiro</Company>
     <Authors>Ernest Ribeiro</Authors>
     <Description>Keeps default audio devices sane around SteamVR.</Description>
-    <Version>1.0.0</Version>
-    <FileVersion>1.0.0.0</FileVersion>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <Version>1.0.1</Version>
+    <FileVersion>1.0.1.0</FileVersion>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
 
     <!-- Footprint: skip ICU/globalization (we use ordinal/invariant only) and
          trim optional runtime features for a lighter background process. -->

@@ -3,7 +3,7 @@
 ; Or run: installer\build-installer.ps1         (publishes + compiles in one step)
 
 #define MyAppName "VR Audio Switcher"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "Ernest Ribeiro"
 #define MyAppExeName "VrAudioSwitcher.exe"
 

@@ -61,7 +61,7 @@ A clean per-user installer (Inno Setup) is scaffolded under `installer/`:
 
 ```powershell
 winget install JRSoftware.InnoSetup   # one-time
-pwsh installer\build-installer.ps1     # publishes + builds installer\dist\VrAudioSwitcher-Setup-x.y.z.exe
+pwsh installer\build-installer.ps1     # publishes + builds installer\dist\VrAudioSwitcher-Setup-1.0.1.exe
 ```
 
 The installer is per-user (no admin), offers desktop/startup shortcuts, and checks
