@@ -9,15 +9,24 @@ namespace VrAudioSwitcher.UI;
 /// <summary>
 /// Desktop configuration window: create/edit/delete profiles (output + mic +
 /// optional HMD auto-switch), set the global cycle hotkey, and toggle launch at
-/// startup. Built in code (no designer) to keep the project lean.
+/// startup / switch sounds. Built in code (no designer) with a flat modern theme.
 /// </summary>
 public sealed class ConfigForm : Form
 {
+    // Theme
+    private static readonly Color Bg = Color.FromArgb(250, 250, 252);
+    private static readonly Color Card = Color.White;
+    private static readonly Color Accent = Color.FromArgb(56, 96, 160);
+    private static readonly Color Border = Color.FromArgb(225, 227, 232);
+    private static readonly Color TextMuted = Color.FromArgb(120, 124, 132);
+    private static readonly Color TextDim = Color.FromArgb(90, 94, 102);
+
     private readonly AppController _controller;
     private readonly HotkeyManager _hotkeys;
 
-    // Working copy of the profile list; committed to the store on Save.
     private readonly List<Profile> _working;
+    private readonly List<AudioDeviceInfo> _outputs;
+    private readonly List<AudioDeviceInfo> _mics;
 
     private readonly ListBox _list = new();
     private readonly TextBox _txtName = new();
@@ -26,13 +35,10 @@ public sealed class ConfigForm : Form
     private readonly CheckBox _chkAutoSwitch = new();
     private readonly TextBox _txtHmd = new();
     private readonly Button _btnCaptureHmd = new();
-    private readonly TextBox _txtHotkey = new();
+    private readonly HotkeyTextBox _txtHotkey = new();
     private readonly CheckBox _chkStartup = new();
+    private readonly CheckBox _chkSound = new();
 
-    private readonly List<AudioDeviceInfo> _outputs;
-    private readonly List<AudioDeviceInfo> _mics;
-
-    private string? _hotkeyString;
     private bool _loading;
 
     public ConfigForm(AppController controller, HotkeyManager hotkeys)
@@ -41,8 +47,7 @@ public sealed class ConfigForm : Form
         _hotkeys = hotkeys;
         _outputs = controller.Audio.ListPlaybackDevices().ToList();
         _mics = controller.Audio.ListCaptureDevices().ToList();
-        _working = controller.Store.Config.Profiles
-            .Select(Clone).ToList();
+        _working = controller.Store.Config.Profiles.Select(Clone).ToList();
 
         BuildLayout();
         LoadProfileList();
@@ -59,125 +64,214 @@ public sealed class ConfigForm : Form
         AutoSwitchOnHmd = p.AutoSwitchOnHmd,
     };
 
+    // ----- Layout -----
+
     private void BuildLayout()
     {
-        Text = "VR Audio Switcher — Configuration";
+        Text = "VR Audio Switcher";
         Icon = IconFactory.CreateIcon(_controller.VrActive);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(640, 420);
+        ClientSize = new Size(724, 596);
+        BackColor = Bg;
         Font = new Font("Segoe UI", 9f);
 
-        // --- Left: profile list + add/remove ---
-        _list.SetBounds(12, 12, 180, 320);
+        BuildLeftColumn();
+        BuildEditor();
+        BuildFooter();
+
+        _txtHotkey.SetInitial(_controller.Store.Config.CycleHotkey);
+        _chkStartup.Checked = StartupManager.IsEnabled();
+        _chkSound.Checked = _controller.Store.Config.PlaySwitchSound;
+    }
+
+    private void BuildLeftColumn()
+    {
+        Controls.Add(SectionLabel("PROFILES", 16, 16, 204));
+
+        _list.SetBounds(16, 40, 204, 398);
+        _list.BorderStyle = BorderStyle.FixedSingle;
+        _list.IntegralHeight = false;
+        _list.Font = new Font("Segoe UI", 10f);
         _list.SelectedIndexChanged += (_, _) => LoadSelectedProfile();
         Controls.Add(_list);
 
-        var btnNew = new Button { Text = "New", Left = 12, Top = 338, Width = 85 };
-        btnNew.Click += (_, _) => AddProfile();
-        var btnDelete = new Button { Text = "Delete", Left = 107, Top = 338, Width = 85 };
-        btnDelete.Click += (_, _) => DeleteProfile();
-        Controls.Add(btnNew);
-        Controls.Add(btnDelete);
+        var btnAdd = MakeButton("+  New", 16, 446, 98, primary: false);
+        btnAdd.Click += (_, _) => AddProfile();
+        var btnDel = MakeButton("Remove", 122, 446, 98, primary: false);
+        btnDel.Click += (_, _) => DeleteProfile();
+        Controls.Add(btnAdd);
+        Controls.Add(btnDel);
+    }
 
-        // --- Right: editor ---
-        int x = 210, y = 12, w = 410;
-        Controls.Add(new Label { Text = "Profile name", Left = x, Top = y, Width = w });
-        _txtName.SetBounds(x, y + 20, w, 24);
+    private void BuildEditor()
+    {
+        // Card background for the editor area.
+        var card = new Panel
+        {
+            Bounds = new Rectangle(244, 16, 464, 424),
+            BackColor = Card,
+            BorderStyle = BorderStyle.FixedSingle,
+        };
+        Controls.Add(card);
+
+        int x = 20, w = 424, y = 16;
+        card.Controls.Add(SectionLabel("PROFILE SETTINGS", x, y, w));
+
+        y += 30;
+        card.Controls.Add(FieldLabel("Name", x, y));
+        StyleInput(_txtName);
+        _txtName.SetBounds(x, y + 20, w, 26);
         _txtName.TextChanged += (_, _) => { if (!_loading) WriteBack(); RefreshListLabel(); };
-        Controls.Add(_txtName);
-
-        y += 56;
-        Controls.Add(new Label { Text = "Output (headset / speakers)", Left = x, Top = y, Width = w });
-        _cmbOutput.SetBounds(x, y + 20, w, 24);
-        _cmbOutput.DropDownStyle = ComboBoxStyle.DropDownList;
-        _cmbOutput.DisplayMember = nameof(AudioDeviceInfo.Name);
-        _cmbOutput.SelectedIndexChanged += (_, _) => { if (!_loading) WriteBack(); };
-        Controls.Add(_cmbOutput);
-
-        y += 56;
-        Controls.Add(new Label { Text = "Microphone", Left = x, Top = y, Width = w });
-        _cmbMic.SetBounds(x, y + 20, w, 24);
-        _cmbMic.DropDownStyle = ComboBoxStyle.DropDownList;
-        _cmbMic.DisplayMember = nameof(AudioDeviceInfo.Name);
-        _cmbMic.SelectedIndexChanged += (_, _) => { if (!_loading) WriteBack(); };
-        Controls.Add(_cmbMic);
+        card.Controls.Add(_txtName);
 
         y += 60;
-        _chkAutoSwitch.Text = "Auto-switch to this profile for the bound headset";
+        card.Controls.Add(FieldLabel("Output  (headset / speakers)", x, y));
+        StyleCombo(_cmbOutput);
+        _cmbOutput.SetBounds(x, y + 20, w, 26);
+        _cmbOutput.SelectedIndexChanged += (_, _) => { if (!_loading) WriteBack(); };
+        card.Controls.Add(_cmbOutput);
+
+        y += 60;
+        card.Controls.Add(FieldLabel("Microphone", x, y));
+        StyleCombo(_cmbMic);
+        _cmbMic.SetBounds(x, y + 20, w, 26);
+        _cmbMic.SelectedIndexChanged += (_, _) => { if (!_loading) WriteBack(); };
+        card.Controls.Add(_cmbMic);
+
+        y += 66;
+        card.Controls.Add(Divider(x, y, w));
+
+        y += 12;
+        _chkAutoSwitch.Text = "Auto-switch to this profile when the bound headset is detected";
         _chkAutoSwitch.SetBounds(x, y, w, 24);
+        _chkAutoSwitch.ForeColor = TextDim;
         _chkAutoSwitch.CheckedChanged += (_, _) => { if (!_loading) WriteBack(); };
-        Controls.Add(_chkAutoSwitch);
+        card.Controls.Add(_chkAutoSwitch);
 
-        y += 28;
-        Controls.Add(new Label { Text = "Bound HMD model", Left = x, Top = y, Width = 160 });
-        _txtHmd.SetBounds(x, y + 20, w - 130, 24);
+        y += 30;
+        card.Controls.Add(FieldLabel("Bound HMD model", x, y));
+        StyleInput(_txtHmd);
+        _txtHmd.SetBounds(x, y + 20, w - 134, 26);
         _txtHmd.TextChanged += (_, _) => { if (!_loading) WriteBack(); };
-        Controls.Add(_txtHmd);
+        card.Controls.Add(_txtHmd);
+
         _btnCaptureHmd.Text = "Use current";
-        _btnCaptureHmd.SetBounds(x + w - 120, y + 19, 120, 26);
+        StyleButton(_btnCaptureHmd, primary: false);
+        _btnCaptureHmd.SetBounds(x + w - 124, y + 19, 124, 28);
         _btnCaptureHmd.Click += (_, _) => CaptureCurrentHmd();
-        Controls.Add(_btnCaptureHmd);
+        card.Controls.Add(_btnCaptureHmd);
+    }
 
-        // --- Bottom: global settings ---
-        var sep = new Label { BorderStyle = BorderStyle.Fixed3D, Left = 12, Top = 348, Width = 608, Height = 2 };
-        Controls.Add(sep);
+    private void BuildFooter()
+    {
+        Controls.Add(Divider(16, 486, 692));
 
-        Controls.Add(new Label { Text = "Cycle hotkey", Left = 12, Top = 360, Width = 90 });
-        _txtHotkey.SetBounds(104, 358, 160, 24);
-        _txtHotkey.ReadOnly = true;
-        _txtHotkey.KeyDown += OnHotkeyKeyDown;
+        Controls.Add(FieldLabel("Cycle hotkey", 16, 500));
+        StyleInput(_txtHotkey);
+        _txtHotkey.SetBounds(16, 520, 200, 26);
         Controls.Add(_txtHotkey);
+        Controls.Add(new Label
+        {
+            Text = "click, then press keys (Backspace clears)",
+            ForeColor = TextMuted,
+            Left = 226, Top = 524, Width = 290, AutoSize = false,
+        });
 
         _chkStartup.Text = "Launch at Windows startup";
-        _chkStartup.SetBounds(284, 360, 220, 24);
+        _chkStartup.SetBounds(16, 558, 230, 24);
+        _chkStartup.ForeColor = TextDim;
         Controls.Add(_chkStartup);
 
-        var btnSave = new Button { Text = "Save", Left = 444, Top = 386, Width = 85, DialogResult = DialogResult.OK };
-        btnSave.Click += (_, _) => Save();
-        var btnCancel = new Button { Text = "Cancel", Left = 535, Top = 386, Width = 85, DialogResult = DialogResult.Cancel };
+        _chkSound.Text = "Play a sound on switch";
+        _chkSound.SetBounds(256, 558, 220, 24);
+        _chkSound.ForeColor = TextDim;
+        Controls.Add(_chkSound);
+
+        var btnSave = MakeButton("Save", 530, 554, 84, primary: true);
+        btnSave.Click += (_, _) => { Save(); Close(); };
+        var btnCancel = MakeButton("Cancel", 622, 554, 86, primary: false);
+        btnCancel.Click += (_, _) => Close();
         Controls.Add(btnSave);
         Controls.Add(btnCancel);
-        AcceptButton = null; // hotkey textbox captures Enter; don't auto-accept
+
+        AcceptButton = null;       // hotkey box needs raw key input
         CancelButton = btnCancel;
-
-        // Global settings initial values
-        _hotkeyString = _controller.Store.Config.CycleHotkey;
-        _txtHotkey.Text = _hotkeyString ?? "(none)";
-        _chkStartup.Checked = StartupManager.IsEnabled();
     }
 
-    private void OnHotkeyKeyDown(object? sender, KeyEventArgs e)
+    // ----- Theme helpers -----
+
+    private static Label SectionLabel(string text, int x, int y, int w) => new()
     {
-        e.SuppressKeyPress = true;
-        var key = e.KeyCode;
-        // Backspace/Delete clears the binding.
-        if (key is Keys.Back or Keys.Delete)
-        {
-            _hotkeyString = null;
-            _txtHotkey.Text = "(none)";
-            return;
-        }
-        // Ignore lone modifier presses; wait for a real key.
-        if (key is Keys.ControlKey or Keys.Menu or Keys.ShiftKey or Keys.LWin or Keys.RWin)
-            return;
-        if (e.Modifiers == Keys.None)
-        {
-            _txtHotkey.Text = "(need a modifier)";
-            return;
-        }
-        _hotkeyString = HotkeyManager.Format(e.Modifiers | key);
-        _txtHotkey.Text = _hotkeyString;
+        Text = text,
+        Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold),
+        ForeColor = Color.FromArgb(110, 116, 128),
+        Left = x, Top = y, Width = w, Height = 18,
+    };
+
+    private static Label FieldLabel(string text, int x, int y) => new()
+    {
+        Text = text,
+        ForeColor = TextDim,
+        Left = x, Top = y, Width = 400, Height = 16, AutoSize = true,
+    };
+
+    private static Label Divider(int x, int y, int w) => new()
+    {
+        BackColor = Border, Left = x, Top = y, Width = w, Height = 1,
+    };
+
+    private static void StyleInput(TextBox t)
+    {
+        t.BorderStyle = BorderStyle.FixedSingle;
+        t.Font = new Font("Segoe UI", 10f);
     }
+
+    private static void StyleCombo(ComboBox c)
+    {
+        c.DropDownStyle = ComboBoxStyle.DropDownList;
+        c.FlatStyle = FlatStyle.Flat;
+        c.Font = new Font("Segoe UI", 10f);
+        c.DisplayMember = nameof(AudioDeviceInfo.Name);
+    }
+
+    private static Button MakeButton(string text, int x, int y, int w, bool primary)
+    {
+        var b = new Button { Text = text, Left = x, Top = y, Width = w, Height = 30 };
+        StyleButton(b, primary);
+        return b;
+    }
+
+    private static void StyleButton(Button b, bool primary)
+    {
+        b.FlatStyle = FlatStyle.Flat;
+        b.Font = new Font("Segoe UI", 9.5f, primary ? FontStyle.Bold : FontStyle.Regular);
+        b.Cursor = Cursors.Hand;
+        if (primary)
+        {
+            b.BackColor = Accent;
+            b.ForeColor = Color.White;
+            b.FlatAppearance.BorderSize = 0;
+            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(70, 112, 180);
+        }
+        else
+        {
+            b.BackColor = Color.White;
+            b.ForeColor = TextDim;
+            b.FlatAppearance.BorderColor = Border;
+            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(240, 242, 246);
+        }
+    }
+
+    // ----- Data binding -----
 
     private void LoadProfileList()
     {
         _list.BeginUpdate();
         _list.Items.Clear();
-        foreach (var p in _working)
-            _list.Items.Add(p.Name);
+        foreach (var p in _working) _list.Items.Add(p.Name);
         _list.EndUpdate();
         if (_working.Count > 0) _list.SelectedIndex = 0;
         else SetEditorEnabled(false);
@@ -215,10 +309,7 @@ public sealed class ConfigForm : Form
         foreach (var d in devices) cmb.Items.Add(d);
 
         if (id != null && devices.All(d => d.Id != id))
-        {
-            // Saved device not currently present — keep it selectable as a placeholder.
             cmb.Items.Add(new AudioDeviceInfo(id, $"{name ?? id} (unavailable)", isCapture));
-        }
 
         int idx = -1;
         for (int i = 0; i < cmb.Items.Count; i++)
@@ -256,6 +347,8 @@ public sealed class ConfigForm : Form
         _working.Add(p);
         _list.Items.Add(p.Name);
         _list.SelectedIndex = _working.Count - 1;
+        _txtName.Focus();
+        _txtName.SelectAll();
     }
 
     private void DeleteProfile()
@@ -278,8 +371,6 @@ public sealed class ConfigForm : Form
                 "No HMD", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
-        // The model was reported on connect; ask the user to type it if blank.
-        // (We expose it via the controller's current profile resolution path instead.)
         var model = _controller.LastHmdModel;
         if (string.IsNullOrWhiteSpace(model))
         {
@@ -296,11 +387,12 @@ public sealed class ConfigForm : Form
         WriteBack();
 
         _controller.Store.Config.Profiles = _working;
-        _controller.Store.Config.CycleHotkey = _hotkeyString;
+        _controller.Store.Config.CycleHotkey = _txtHotkey.HotkeyString;
         _controller.Store.Config.LaunchAtStartup = _chkStartup.Checked;
+        _controller.Store.Config.PlaySwitchSound = _chkSound.Checked;
         _controller.Store.Save();
 
-        _hotkeys.Register(_hotkeyString);
+        _hotkeys.Register(_txtHotkey.HotkeyString);
         StartupManager.SetEnabled(_chkStartup.Checked);
 
         _controller.NotifyConfigChanged();

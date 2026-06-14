@@ -75,6 +75,7 @@ public sealed class AppController : IDisposable
         if (_desktopSnapshot != null)
         {
             try { Audio.Restore(_desktopSnapshot); } catch { /* devices may be gone */ }
+            if (Store.Config.PlaySwitchSound) Sounds.PlayRestore();
         }
         CurrentProfile = null;
         StateChanged?.Invoke();
@@ -87,6 +88,7 @@ public sealed class AppController : IDisposable
         CurrentProfile = profile;
         Store.Config.LastUsedProfileName = profile.Name;
         Store.Save();
+        if (Store.Config.PlaySwitchSound) Sounds.PlaySwitch();
         StateChanged?.Invoke();
     }
 

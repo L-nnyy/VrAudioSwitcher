@@ -13,4 +13,7 @@ public sealed class AppConfig
 
     /// <summary>Whether the app registers itself to launch at Windows logon.</summary>
     public bool LaunchAtStartup { get; set; }
+
+    /// <summary>Play a Windows system sound when switching profiles / restoring.</summary>
+    public bool PlaySwitchSound { get; set; } = true;
 }
