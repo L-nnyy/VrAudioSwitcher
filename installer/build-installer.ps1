@@ -11,11 +11,15 @@ dotnet publish "$root\VrAudioSwitcher\VrAudioSwitcher.csproj" -c Release -r win-
     --self-contained false -p:PublishSingleFile=true `
     -p:IncludeNativeLibrariesForSelfExtract=true -o "$root\publish"
 
-# Locate the Inno Setup compiler.
+# Locate the Inno Setup compiler (PATH, machine install, or per-user install).
 $iscc = (Get-Command iscc -ErrorAction SilentlyContinue).Source
 if (-not $iscc) {
-    $candidate = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
-    if (Test-Path $candidate) { $iscc = $candidate }
+    $candidates = @(
+        "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+        "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+        "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
+    )
+    $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 }
 if (-not $iscc) {
     throw "Inno Setup compiler (ISCC.exe) not found. Install it: winget install JRSoftware.InnoSetup"
