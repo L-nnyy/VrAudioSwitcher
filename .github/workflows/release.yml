@@ -48,7 +48,7 @@ jobs:
           $lines | Out-File "release/SHA256SUMS.txt" -Encoding utf8
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: VR Audio Switcher ${{ steps.ver.outputs.version }}
           files: release/*
