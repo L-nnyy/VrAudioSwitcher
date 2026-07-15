@@ -24,11 +24,13 @@ jobs:
         run: dotnet build -c Release --no-restore
 
       - name: Publish single-file (smoke)
+        # No --no-restore here: publishing with an explicit RID needs its own
+        # RID-specific restore, which the earlier RID-less restore did not produce.
         run: >
           dotnet publish VrAudioSwitcher/VrAudioSwitcher.csproj
           -c Release -r win-x64 --self-contained false
           -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
-          -o publish --no-restore
+          -o publish
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4

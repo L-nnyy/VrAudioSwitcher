@@ -40,9 +40,12 @@ jobs:
           New-Item -ItemType Directory -Force release | Out-Null
           Copy-Item "installer/dist/VrAudioSwitcher-Setup-$v.exe" "release/"
           Copy-Item "publish/VrAudioSwitcher.exe" "release/VrAudioSwitcher-$v-portable.exe"
-          Get-ChildItem release -File |
-            ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash)  $($_.Name)" } |
-            Out-File "release/SHA256SUMS.txt" -Encoding utf8
+          # Materialize the file list and hashes BEFORE writing, so the streaming
+          # enumeration finishes before Out-File opens SHA256SUMS.txt in the same
+          # directory (otherwise Get-FileHash hits its own output file mid-write).
+          $lines = Get-ChildItem release -File |
+            ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash)  $($_.Name)" }
+          $lines | Out-File "release/SHA256SUMS.txt" -Encoding utf8
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
