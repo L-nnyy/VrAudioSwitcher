@@ -31,6 +31,12 @@ public sealed class AppController : IDisposable
     /// <summary>Raised whenever VR status or the current profile changes (UI refresh).</summary>
     public event Action? StateChanged;
 
+    /// <summary>
+    /// Raised when a profile could not be applied because a target endpoint is not
+    /// present (e.g. VR headset asleep). The UI surfaces this instead of crashing.
+    /// </summary>
+    public event Action<Profile, AudioDeviceUnavailableException>? ProfileApplyFailed;
+
     public AppController()
     {
         Watcher.Connected += OnVrConnected;
@@ -82,14 +88,25 @@ public sealed class AppController : IDisposable
     }
 
     /// <summary>Apply a profile (output + mic on all roles) and remember it as last used.</summary>
-    public void ApplyProfile(Profile profile)
+    public bool ApplyProfile(Profile profile)
     {
-        Audio.ApplyProfile(profile.OutputId, profile.MicId);
+        try
+        {
+            Audio.ApplyProfile(profile.OutputId, profile.MicId);
+        }
+        catch (AudioDeviceUnavailableException ex)
+        {
+            // Endpoint not present (headset asleep, device unplugged). Leave the
+            // current default untouched and let the UI explain.
+            ProfileApplyFailed?.Invoke(profile, ex);
+            return false;
+        }
         CurrentProfile = profile;
         Store.Config.LastUsedProfileName = profile.Name;
         Store.Save();
         if (Store.Config.PlaySwitchSound) Sounds.PlaySwitch();
         StateChanged?.Invoke();
+        return true;
     }
 
     public void ApplyProfileByName(string name)
@@ -109,8 +126,7 @@ public sealed class AppController : IDisposable
 
         int idx = CurrentProfile == null ? -1 : list.IndexOf(CurrentProfile);
         var next = list[(idx + 1) % list.Count];
-        ApplyProfile(next);
-        return next;
+        return ApplyProfile(next) ? next : null;
     }
 
     private AudioSnapshot? SafeSnapshot()

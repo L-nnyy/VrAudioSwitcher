@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.2 — 2026-07-15
+
+- No more crash dialog when a profile targets an audio endpoint that is not
+  present (e.g. a VR headset that is unplugged or asleep — its DisplayPort audio
+  sink only exists while the display is on). Instead the tray shows a warning
+  balloon naming the missing device and listing the outputs/microphones Windows
+  currently exposes, to help diagnose. Applies to every path: menu, cycle
+  hotkey, and SteamVR auto-switch.
+
 ## 1.0.1 — 2026-06-14
 
 - Single instance: launching the app again opens the config window of the running

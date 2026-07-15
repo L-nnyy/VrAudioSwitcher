@@ -5,7 +5,7 @@
 #define MyAppName "VR Audio Switcher"
 ; Version may be overridden from the command line: iscc /DMyAppVersion=1.2.3
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.1"
+  #define MyAppVersion "1.0.2"
 #endif
 #define MyAppPublisher "Ernest Ribeiro"
 #define MyAppExeName "VrAudioSwitcher.exe"

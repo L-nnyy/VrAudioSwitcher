@@ -15,6 +15,11 @@ public sealed class AudioManager : IDisposable
     private static readonly EDataFlow[] AllFlows =
         { EDataFlow.Render, EDataFlow.Capture };
 
+    // HRESULT_FROM_WIN32(ERROR_NOT_FOUND). Returned by SetDefaultEndpoint when the
+    // target endpoint is not currently present/active (e.g. a VR headset whose
+    // display — and thus its DisplayPort audio sink — is asleep).
+    private const int ElementNotFound = unchecked((int)0x80070490);
+
     // Long-lived enumerator + client for default-change notifications (event-driven,
     // replaces polling).
     private IMMDeviceEnumerator? _notifyEnumerator;
@@ -81,11 +86,38 @@ public sealed class AudioManager : IDisposable
         try
         {
             foreach (var role in AllRoles)
-                Check(policy.SetDefaultEndpoint(deviceId, role), $"SetDefaultEndpoint({role})");
+            {
+                int hr = policy.SetDefaultEndpoint(deviceId, role);
+                if (hr == ElementNotFound)
+                    throw new AudioDeviceUnavailableException(deviceId);
+                Check(hr, $"SetDefaultEndpoint({role})");
+            }
         }
         finally
         {
             Marshal.ReleaseComObject(policy);
+        }
+    }
+
+    /// <summary>
+    /// Human-readable list of the currently active playback + capture endpoints,
+    /// for diagnostics when a profile targets a device that is not present.
+    /// </summary>
+    public string DescribeActiveDevices()
+    {
+        static string Section(string title, IReadOnlyList<AudioDeviceInfo> devices) =>
+            devices.Count == 0
+                ? $"{title}: (none)"
+                : $"{title}:\n  " + string.Join("\n  ", devices.Select(d => d.Name));
+
+        try
+        {
+            return Section("Outputs", ListPlaybackDevices())
+                 + "\n" + Section("Microphones", ListCaptureDevices());
+        }
+        catch (Exception ex)
+        {
+            return $"(could not enumerate devices: {ex.Message})";
         }
     }
 
@@ -206,4 +238,17 @@ public sealed class AudioManager : IDisposable
     {
         if (hr != 0) throw new COMException($"Core Audio call failed: {what}", hr);
     }
+}
+
+/// <summary>
+/// Thrown when a profile targets an audio endpoint that Windows does not currently
+/// expose (unplugged / not present). Carries the offending endpoint id so the UI
+/// can map it back to a friendly profile device name.
+/// </summary>
+public sealed class AudioDeviceUnavailableException : Exception
+{
+    public string DeviceId { get; }
+
+    public AudioDeviceUnavailableException(string deviceId)
+        : base($"Audio endpoint not available: {deviceId}") => DeviceId = deviceId;
 }

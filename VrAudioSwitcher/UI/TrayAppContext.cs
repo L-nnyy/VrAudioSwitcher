@@ -1,7 +1,9 @@
 using System.Drawing;
 using System.Threading;
+using VrAudioSwitcher.Audio;
 using VrAudioSwitcher.Core;
 using VrAudioSwitcher.Hotkeys;
+using VrAudioSwitcher.Profiles;
 using VrAudioSwitcher.Vr;
 
 namespace VrAudioSwitcher.UI;
@@ -38,6 +40,7 @@ public sealed class TrayAppContext : ApplicationContext
 
         _overlay = new ProfileOverlay(_controller);
         _controller.StateChanged += OnStateChanged;
+        _controller.ProfileApplyFailed += OnProfileApplyFailed;
         _controller.Watcher.Connected += OnVrConnected;
         _controller.Watcher.Quit += OnVrQuit;
         _hotkeys.Pressed += OnHotkeyPressed;
@@ -86,6 +89,23 @@ public sealed class TrayAppContext : ApplicationContext
         if (p != null) ShowBalloon($"Profile: {p.Name}");
     }
 
+    // A profile could not be applied because a target endpoint is not present
+    // (typically the VR headset is unplugged or asleep). Explain, and list the
+    // devices Windows currently exposes to help diagnose.
+    private void OnProfileApplyFailed(Profile profile, AudioDeviceUnavailableException ex)
+    {
+        string device = ex.DeviceId == profile.MicId
+            ? profile.MicName ?? "microphone"
+            : profile.OutputName ?? "sortie audio";
+
+        string text =
+            $"\"{profile.Name}\" : {device} indisponible.\n" +
+            "Casque non branché ou en veille (lance SteamVR pour le réveiller).\n\n" +
+            _controller.Audio.DescribeActiveDevices();
+
+        ShowBalloon(text, ToolTipIcon.Warning);
+    }
+
     private void BuildMenu(ContextMenuStrip menu)
     {
         menu.Items.Clear();
@@ -102,7 +122,7 @@ public sealed class TrayAppContext : ApplicationContext
                 Checked = ReferenceEquals(p, _controller.CurrentProfile),
             };
             var captured = p;
-            item.Click += (_, _) => { _controller.ApplyProfile(captured); ShowBalloon($"Profile: {captured.Name}"); };
+            item.Click += (_, _) => { if (_controller.ApplyProfile(captured)) ShowBalloon($"Profile: {captured.Name}"); };
             menu.Items.Add(item);
         }
         if (_controller.Store.Config.Profiles.Count > 0)
@@ -151,11 +171,13 @@ public sealed class TrayAppContext : ApplicationContext
             : $"VR Audio Switcher — {current}";
     }
 
-    private void ShowBalloon(string text)
+    private void ShowBalloon(string text, ToolTipIcon icon = ToolTipIcon.None)
     {
         _tray.BalloonTipTitle = "VR Audio Switcher";
         _tray.BalloonTipText = text;
-        _tray.ShowBalloonTip(3000);
+        _tray.BalloonTipIcon = icon;
+        // Warnings carry more text (device list) — give them longer on screen.
+        _tray.ShowBalloonTip(icon == ToolTipIcon.None ? 3000 : 10000);
     }
 
     protected override void ExitThreadCore()
